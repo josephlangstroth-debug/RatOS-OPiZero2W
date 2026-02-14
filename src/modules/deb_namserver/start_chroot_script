@@ -24,7 +24,10 @@ if [ -x /usr/bin/sudo ]; then
     mv /usr/bin/sudo /usr/bin/sudo.real
     cat > /usr/bin/sudo << 'WRAPPER'
 #!/bin/bash
-# sudo wrapper for nosuid chroot - already running as root
+# sudo wrapper for nosuid chroot - everything runs as root.
+# On nosuid mounts, neither sudo nor su can escalate privileges.
+# Instead of switching users, we set environment variables and stay root.
+# This avoids the non-root-cannot-escalate-back problem entirely.
 SUDO_USER=""
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -35,17 +38,12 @@ while [ $# -gt 0 ]; do
         *) break ;;
     esac
 done
-if [ -n "$SUDO_USER" ] && [ "$(id -u)" = "0" ]; then
-    CMD=$(printf '%q ' "$@")
-    exec su -s /bin/bash "$SUDO_USER" -c "$CMD"
-elif [ "$(id -u)" != "0" ]; then
-    # Non-root calling sudo: can't escalate on nosuid mount.
-    # All privileged operations are already handled by the root-level
-    # module scripts, so silently succeed for any sudo call from non-root.
-    exit 0
-else
-    exec "$@"
+if [ -n "$SUDO_USER" ]; then
+    export HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6 2>/dev/null || echo "/home/$SUDO_USER")
+    export USER="$SUDO_USER"
+    export LOGNAME="$SUDO_USER"
 fi
+exec "$@"
 WRAPPER
     chmod +x /usr/bin/sudo
 fi
