@@ -40,20 +40,9 @@ if [ -n "$SUDO_USER" ] && [ "$(id -u)" = "0" ]; then
     exec su -s /bin/bash "$SUDO_USER" -c "$CMD"
 elif [ "$(id -u)" != "0" ]; then
     # Non-root calling sudo: can't escalate on nosuid mount.
-    # Intercept root-requiring commands that the module already handled.
-    case "$1" in
-        apt|apt-get|dpkg)
-            # Packages pre-installed by module; silently succeed
-            exit 0
-            ;;
-        systemctl|service)
-            # Service management not meaningful in build chroot
-            exit 0
-            ;;
-        *)
-            exec "$@"
-            ;;
-    esac
+    # All privileged operations are already handled by the root-level
+    # module scripts, so silently succeed for any sudo call from non-root.
+    exit 0
 else
     exec "$@"
 fi
