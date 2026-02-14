@@ -18,25 +18,28 @@ echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
 # Create sudo wrapper for nosuid chroot environments
 # The loop-mounted filesystem has nosuid, so the real sudo binary
-# cannot elevate. Since chroot already runs as root, we replace
-# sudo with a wrapper that handles -u (drop to user) via su.
-if [ -x /usr/bin/sudo ] && ! /usr/bin/sudo true 2>/dev/null; then
+# cannot setuid when called by non-root users inside the chroot.
+# Replace it unconditionally with a wrapper.
+if [ -x /usr/bin/sudo ]; then
     mv /usr/bin/sudo /usr/bin/sudo.real
     cat > /usr/bin/sudo << 'WRAPPER'
 #!/bin/bash
-# sudo wrapper for nosuid chroot - we are already root
+# sudo wrapper for nosuid chroot - already running as root
 SUDO_USER=""
 while [ $# -gt 0 ]; do
     case "$1" in
         -u) shift; SUDO_USER="$1"; shift ;;
-        -E|-H|-n|-S) shift ;;
+        -E|-H|-n|-S|-k) shift ;;
         --) shift; break ;;
         -*) shift ;;
         *) break ;;
     esac
 done
-if [ -n "$SUDO_USER" ]; then
+if [ -n "$SUDO_USER" ] && [ "$(id -u)" = "0" ]; then
     exec su -s /bin/bash "$SUDO_USER" -c "$*"
+elif [ "$(id -u)" != "0" ]; then
+    # Non-root calling sudo: just run it directly (we're in a build chroot)
+    exec "$@"
 else
     exec "$@"
 fi
