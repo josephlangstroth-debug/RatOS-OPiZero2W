@@ -36,7 +36,8 @@ while [ $# -gt 0 ]; do
     esac
 done
 if [ -n "$SUDO_USER" ] && [ "$(id -u)" = "0" ]; then
-    exec su -s /bin/bash "$SUDO_USER" -c "$*"
+    CMD=$(printf '%q ' "$@")
+    exec su -s /bin/bash "$SUDO_USER" -c "$CMD"
 elif [ "$(id -u)" != "0" ]; then
     # Non-root calling sudo: just run it directly (we're in a build chroot)
     exec "$@"
