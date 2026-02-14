@@ -24,10 +24,10 @@ if [ -x /usr/bin/sudo ]; then
     mv /usr/bin/sudo /usr/bin/sudo.real
     cat > /usr/bin/sudo << 'WRAPPER'
 #!/bin/bash
-# sudo wrapper for nosuid chroot - everything runs as root.
-# On nosuid mounts, neither sudo nor su can escalate privileges.
-# Instead of switching users, we set environment variables and stay root.
-# This avoids the non-root-cannot-escalate-back problem entirely.
+# sudo wrapper for nosuid chroot environments.
+# Root->user: uses su (works from root even on nosuid).
+# User->root: uses a FIFO-based IPC to a background root executor
+# that is started when the root->user switch happens.
 SUDO_USER=""
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -38,12 +38,47 @@ while [ $# -gt 0 ]; do
         *) break ;;
     esac
 done
-if [ -n "$SUDO_USER" ]; then
+
+if [ -n "$SUDO_USER" ] && [ "$(id -u)" = "0" ]; then
+    # Root switching to another user.
+    # Start a background root executor so inner sudo calls can escalate.
+    _FIFO="/tmp/.sudo_cmd_$$"
+    _FIFO_RC="/tmp/.sudo_rc_$$"
+    mkfifo "$_FIFO" "$_FIFO_RC"
+    chmod 666 "$_FIFO" "$_FIFO_RC"
+    (
+        while true; do
+            _L=$(cat "$_FIFO")
+            [ "$_L" = "QUIT" ] && break
+            [ -z "$_L" ] && continue
+            bash -c "$_L"
+            echo $? > "$_FIFO_RC"
+        done
+    ) &
+    _EPID=$!
+    export _SUDO_FIFO="$_FIFO" _SUDO_FIFO_RC="$_FIFO_RC"
     export HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6 2>/dev/null || echo "/home/$SUDO_USER")
-    export USER="$SUDO_USER"
-    export LOGNAME="$SUDO_USER"
+    export USER="$SUDO_USER" LOGNAME="$SUDO_USER"
+    _C=$(printf '%q ' "$@")
+    su -p -s /bin/bash "$SUDO_USER" -c "$_C"
+    _RC=$?
+    echo "QUIT" > "$_FIFO"
+    wait $_EPID 2>/dev/null
+    rm -f "$_FIFO" "$_FIFO_RC"
+    exit $_RC
+elif [ "$(id -u)" != "0" ] && [ -n "$_SUDO_FIFO" ]; then
+    # Non-root with FIFO available: escalate via root executor
+    _C=$(printf '%q ' "$@")
+    echo "$_C" > "$_SUDO_FIFO"
+    _RC=$(cat "$_SUDO_FIFO_RC")
+    exit ${_RC:-1}
+elif [ "$(id -u)" != "0" ]; then
+    # Non-root without FIFO: best effort
+    exec "$@"
+else
+    # Root without -u: just run it
+    exec "$@"
 fi
-exec "$@"
 WRAPPER
     chmod +x /usr/bin/sudo
 fi
