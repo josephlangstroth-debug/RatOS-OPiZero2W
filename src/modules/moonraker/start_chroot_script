@@ -88,6 +88,9 @@ unpack /filesystem/home/"${BASE_USER}" /home/"${BASE_USER}" "${BASE_USER}"
 
 ## Step 14:
 echo_green "Enable moonraker.service ..."
+# Unmask first: the install script's sudo calls through the chroot wrapper
+# may leave the service in a masked state
+systemctl unmask moonraker.service 2>/dev/null || true
 systemctl_if_exists enable moonraker.service
 
 ## Finish
