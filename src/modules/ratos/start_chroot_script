@@ -69,43 +69,14 @@ check_install_pkgs ${RATOS_DEPS}
 ## END Step 3
 
 
-## Create ratos-configurator systemd service file directly as root
-## BEFORE running setup.sh. The setup.sh uses 'sudo /bin/sh -c "cat > file"
-## << EOF' which relies on stdin forwarding that doesn't work through the
-## chroot sudo wrapper. By creating the file first, setup.sh's
-## install_service() sees it exists and skips the broken attempt.
-echo_green "Creating ratos-configurator systemd service file ..."
-CONFIGURATOR_SRC="/home/${BASE_USER}/ratos-configurator"
-CONFIGURATOR_SERVICE="/etc/systemd/system/ratos-configurator.service"
-cat > "${CONFIGURATOR_SERVICE}" << CFGEOF
-# Systemd service file for the RatOS Configurator
-[Unit]
-Description=API Server for Klipper
-Requires=network-online.target
-After=network-online.target
-
-[Install]
-WantedBy=multi-user.target
-
-[Service]
-Type=simple
-User=${BASE_USER}
-SupplementaryGroups=ratos-configurator
-RemainAfterExit=yes
-WorkingDirectory=${CONFIGURATOR_SRC}
-ExecStart=yarn start
-Restart=always
-RestartSec=10
-CFGEOF
-systemctl_if_exists enable ratos-configurator.service
-
-# Install RatOS Configurator
-sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/scripts/setup.sh
+# Install RatOS Configurator (v2.1.x-deployment has app/ subdirectory structure)
+# setup.sh uses template + cp + sed for service file (works through FIFO wrapper)
+sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
 
 # Start the configurator so extensions can access the API
 echo "Starting RatOS Configurator"
-pushd "/home/${BASE_USER}/ratos-configurator"
-sudo -u "${BASE_USER}" npm run start &
+pushd "/home/${BASE_USER}/ratos-configurator/app"
+sudo -u "${BASE_USER}" pnpm start &
 # Wait for configurator to start
 # shellcheck disable=SC2016
 timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3000)" != "404" ]]; do sleep 5; done' || false
