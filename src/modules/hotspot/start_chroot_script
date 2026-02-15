@@ -10,6 +10,12 @@ set -e
 
 source /common.sh
 
+# Disable non-essential repos to avoid OOM under QEMU arm64 emulation
+apt-get clean
+sync
+for f in /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/armbian-configng.list; do
+    [ -f "$f" ] && mv "$f" "${f}.bak"
+done
 apt-get update --allow-releaseinfo-change
 apt-get -y purge dns-root-data
 apt-get -y install iw
@@ -71,6 +77,11 @@ fi
 
 # Add cronjob
 # echo "* * * * * /usr/bin/autohotspotN" | crontab -
+
+# Re-enable repos disabled for OOM prevention
+for f in /etc/apt/sources.list.d/nodesource.list.bak /etc/apt/sources.list.d/armbian-configng.list.bak; do
+    [ -f "$f" ] && mv "$f" "${f%.bak}"
+done
 
 systemctl enable autohotspot.service
 

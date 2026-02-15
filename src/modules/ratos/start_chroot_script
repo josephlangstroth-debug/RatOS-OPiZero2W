@@ -63,9 +63,18 @@ fi
 ## END Step 2
 
 ## Step 3: Install system dependencies
+## Temporarily disable non-essential repos to avoid OOM under QEMU
+apt-get clean
+sync
+for f in /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/armbian-configng.list; do
+    [ -f "$f" ] && mv "$f" "${f}.bak"
+done
 apt-get update --allow-releaseinfo-change
 # shellcheck disable=SC2086
 check_install_pkgs ${RATOS_DEPS}
+for f in /etc/apt/sources.list.d/nodesource.list.bak /etc/apt/sources.list.d/armbian-configng.list.bak; do
+    [ -f "$f" ] && mv "$f" "${f%.bak}"
+done
 ## END Step 3
 
 
