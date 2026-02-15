@@ -52,13 +52,13 @@ echo "${DIST_NAME} v${DIST_VERSION} ($(get_parent))" > "/etc/${DIST_NAME,,}-rele
 ### Substep 1: Do for armbian releases
 if [[ -f "/etc/armbian-release" ]]; then
     echo_green "Apply release file workaround (armbian based image) ..."
-    ln -s /etc/"${DIST_NAME,,}"-release /etc/aaaa-release
+    ln -sf /etc/"${DIST_NAME,,}"-release /etc/aaaa-release
 fi
 ### END Substep 1
 ### Substep 2: Apply same for OrangePI based Images
 if [[ -f "/etc/orangepi-release" ]]; then
     echo_green "Apply release file workaround (orangepi based image) ..."
-    ln -s /etc/"${DIST_NAME,,}"-release /etc/aaaa-release
+    ln -sf /etc/"${DIST_NAME,,}"-release /etc/aaaa-release
 fi
 ## END Step 2
 
