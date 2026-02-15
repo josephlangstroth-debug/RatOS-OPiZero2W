@@ -69,6 +69,23 @@ check_install_pkgs ${RATOS_DEPS}
 ## END Step 3
 
 
+## Create ratos env file before setup.sh runs.
+## environment.sh uses 'sudo tee "$file" <<EOF' which fails through the
+## FIFO sudo wrapper (stdin/heredoc not forwarded). Create it as root here.
+echo_green "Creating RatOS environment file ..."
+mkdir -p /usr/local/etc
+cat > /usr/local/etc/.ratos.env << ENVEOF
+RATOS_USERNAME=${BASE_USER}
+RATOS_USERGROUP=${BASE_USER}
+RATOS_PRINTER_DATA_DIR=/home/${BASE_USER}/printer_data
+MOONRAKER_DIR=/home/${BASE_USER}/moonraker
+KLIPPER_DIR=/home/${BASE_USER}/klipper
+KLIPPER_ENV=/home/${BASE_USER}/klippy-env
+BEACON_DIR=/home/${BASE_USER}/beacon
+ENVEOF
+chmod a+r /usr/local/etc/.ratos.env
+ln -sf /usr/local/etc/.ratos.env /etc/profile.d/ratos.sh
+
 # Install RatOS Configurator (v2.1.x-deployment has app/ subdirectory structure)
 # setup.sh uses template + cp + sed for service file (works through FIFO wrapper)
 sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
