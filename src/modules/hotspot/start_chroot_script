@@ -63,8 +63,11 @@ dhcp-range=192.168.50.150,192.168.50.200,255.255.255.0,12h
 # sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
 sed -i 's/net.ipv4.ip_forward=1/#net.ipv4.ip_forward=1/g' /etc/sysctl.conf
 
-cp /etc/network/interfaces /etc/network/interfaces-backup
-echo "" > /etc/network/interfaces
+# Armbian uses NetworkManager, so /etc/network/interfaces may not exist
+if [ -f /etc/network/interfaces ]; then
+    cp /etc/network/interfaces /etc/network/interfaces-backup
+    echo "" > /etc/network/interfaces
+fi
 
 # Add cronjob
 # echo "* * * * * /usr/bin/autohotspotN" | crontab -
