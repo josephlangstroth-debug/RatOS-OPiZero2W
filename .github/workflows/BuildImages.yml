@@ -62,6 +62,15 @@ jobs:
           restore-keys: |
             ${{ matrix.config }}-apt-get-
 
+      - name: Create swap for QEMU builds
+        shell: bash
+        run: |
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          echo "Swap enabled: $(swapon --show)"
+
       - name: Build image
         id: build
         uses: mainsail-crew/MainsailOS-actions/build-image@master
