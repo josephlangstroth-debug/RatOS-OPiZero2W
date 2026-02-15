@@ -110,6 +110,11 @@ echo "RATOS CLI SANITY CHECKS"
 echo $PATH
 ls -la /usr/local/bin
 
+# Symlink templates dir so ratos-install.sh can find them
+# (scripts reference $SCRIPT_DIR/templates/ but templates are at configuration/templates/)
+ln -sf /home/"${BASE_USER}"/ratos-configurator/configuration/templates \
+       /home/"${BASE_USER}"/ratos-configurator/configuration/scripts/templates
+
 # Install RatOS Configuration
 sudo -u "${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/RatOS/scripts/ratos-install.sh
 
