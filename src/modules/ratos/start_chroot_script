@@ -93,6 +93,10 @@ ln -sf /usr/local/etc/.ratos.env /etc/profile.d/ratos.sh
 echo_green "Creating RatOS CLI symlink ..."
 ln -sf /home/"${BASE_USER}"/ratos-configurator/app/bin/ratos /usr/local/bin/ratos
 
+# Disable Next.js telemetry via env var to avoid npx download during setup
+# (npx next telemetry disable can fail with ECONNRESET under QEMU)
+export NEXT_TELEMETRY_DISABLED=1
+
 # Install RatOS Configurator (v2.1.x-deployment has app/ subdirectory structure)
 # setup.sh uses template + cp + sed for service file (works through FIFO wrapper)
 sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
