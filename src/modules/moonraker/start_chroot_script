@@ -64,12 +64,22 @@ check_install_pkgs ${MOONRAKER_DEPS}
 pushd "/home/${BASE_USER}/moonraker" &> /dev/null || exit 1
 
 ## Step 7b: Free memory before install (QEMU emulation is memory-hungry)
+## Temporarily disable nodesource apt repo — its package list causes OOM
+## under QEMU arm64 emulation during apt-get update. Node is already installed.
 apt-get clean
 sync
+if [ -f /etc/apt/sources.list.d/nodesource.list ]; then
+    mv /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/nodesource.list.bak
+fi
 
 ## Step 8: Run moonraker install routine
 echo_green "Launch moonraker install routine ..."
 sudo -u "${BASE_USER}" ./scripts/install-moonraker.sh -z -x
+
+## Step 8a: Re-enable nodesource repo
+if [ -f /etc/apt/sources.list.d/nodesource.list.bak ]; then
+    mv /etc/apt/sources.list.d/nodesource.list.bak /etc/apt/sources.list.d/nodesource.list
+fi
 
 ## Step 8b: Create systemd service file directly as root.
 ## The install script uses 'sudo bash -c "cat > file" << EOF' which
