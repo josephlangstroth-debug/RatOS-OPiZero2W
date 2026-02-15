@@ -72,6 +72,36 @@ check_install_pkgs ${RATOS_DEPS}
 # Install RatOS Configurator
 sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/scripts/setup.sh
 
+## Create ratos-configurator systemd service file directly as root.
+## The setup.sh uses 'sudo /bin/sh -c "cat > file" << EOF' which
+## relies on stdin forwarding that doesn't work through the chroot
+## sudo wrapper. Create the service file here instead.
+echo_green "Creating ratos-configurator systemd service file ..."
+CONFIGURATOR_SRC="/home/${BASE_USER}/ratos-configurator"
+CONFIGURATOR_SERVICE="/etc/systemd/system/ratos-configurator.service"
+if [ ! -f "${CONFIGURATOR_SERVICE}" ]; then
+    cat > "${CONFIGURATOR_SERVICE}" << CFGEOF
+# Systemd service file for the RatOS Configurator
+[Unit]
+Description=API Server for Klipper
+Requires=network-online.target
+After=network-online.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=${BASE_USER}
+SupplementaryGroups=ratos-configurator
+RemainAfterExit=yes
+WorkingDirectory=${CONFIGURATOR_SRC}
+ExecStart=yarn start
+Restart=always
+RestartSec=10
+CFGEOF
+fi
+
 # Start the configurator so extensions can access the API
 echo "Starting RatOS Configurator"
 pushd "/home/${BASE_USER}/ratos-configurator"
