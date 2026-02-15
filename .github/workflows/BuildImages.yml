@@ -62,14 +62,19 @@ jobs:
           restore-keys: |
             ${{ matrix.config }}-apt-get-
 
-      - name: Create swap for QEMU builds
+      - name: Extend swap for QEMU builds
         shell: bash
         run: |
-          sudo fallocate -l 4G /swapfile
+          # Extend existing swap or create additional swapfile
+          if [ -f /swapfile ]; then
+            sudo swapoff /swapfile 2>/dev/null || true
+            sudo rm -f /swapfile
+          fi
+          sudo fallocate -l 6G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
-          echo "Swap enabled: $(swapon --show)"
+          echo "Swap: $(free -h | grep Swap)"
 
       - name: Build image
         id: build
