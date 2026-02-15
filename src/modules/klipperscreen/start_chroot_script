@@ -22,7 +22,47 @@ gitclone KLIPPERSCREEN KlipperScreen
 cd /home/pi/KlipperScreen
 sudo -u "${BASE_USER}" NETWORK="skipnetworkmanagerinstall" ./scripts/KlipperScreen-install.sh
 
+## Create KlipperScreen service file directly as root.
+## The install script uses 'echo | sudo tee' which fails through the
+## chroot FIFO sudo wrapper (stdin not forwarded through named pipe).
+KS_DIR="/home/${BASE_USER}/KlipperScreen"
+KS_ENV="${KS_DIR}/.venv"
+if [ ! -f /etc/systemd/system/KlipperScreen.service ]; then
+    echo_green "Creating KlipperScreen systemd service file ..."
+    cat > /etc/systemd/system/KlipperScreen.service << KSEOF
+[Unit]
+Description=KlipperScreen
+StartLimitIntervalSec=0
+After=systemd-user-sessions.service plymouth-quit-wait.service
+ConditionPathExists=/dev/tty0
+Wants=dbus.socket systemd-logind.service
+After=dbus.socket systemd-logind.service
+After=moonraker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=2
+User=${BASE_USER}
+SupplementaryGroups=klipperscreen
+WorkingDirectory=${KS_DIR}
+Environment="KS_XCLIENT=${KS_ENV}/bin/python ${KS_DIR}/screen.py" BACKEND=auto
+ExecStart="${KS_DIR}/scripts/KlipperScreen-start.sh"
+UtmpIdentifier=tty7
+UtmpMode=user
+PAMName=%u
+TTYPath=/dev/tty7
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+[Install]
+WantedBy=multi-user.target
+KSEOF
+    systemctl_if_exists enable KlipperScreen.service
+fi
+
 # Mute output from klipperscreen service
-sudo sed -i 's/\[Service\]/\[Service\]\n\StandardOutput=null\nStandardError=null/g' /etc/systemd/system/KlipperScreen.service
+sed -i 's/\[Service\]/\[Service\]\nStandardOutput=null\nStandardError=null/g' /etc/systemd/system/KlipperScreen.service
 
 sudo systemctl stop KlipperScreen
