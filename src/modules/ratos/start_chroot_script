@@ -86,6 +86,13 @@ ENVEOF
 chmod a+r /usr/local/etc/.ratos.env
 ln -sf /usr/local/etc/.ratos.env /etc/profile.d/ratos.sh
 
+## Pre-create ratos CLI symlink. setup.sh's install_cli() does
+## 'sudo rm /usr/local/bin/ratos' before ln -s, which fails on first
+## install when the file doesn't exist (set -e kills the script).
+## By creating the symlink here, install_cli() sees it and skips.
+echo_green "Creating RatOS CLI symlink ..."
+ln -sf /home/"${BASE_USER}"/ratos-configurator/app/bin/ratos /usr/local/bin/ratos
+
 # Install RatOS Configurator (v2.1.x-deployment has app/ subdirectory structure)
 # setup.sh uses template + cp + sed for service file (works through FIFO wrapper)
 sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
