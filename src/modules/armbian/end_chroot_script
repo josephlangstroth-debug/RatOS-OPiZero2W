@@ -47,3 +47,16 @@ sudo passwd -l root
 ## Step 5: Remove passwdless sudo
 sed -i '/'"${BASE_USER}"' ALL=(ALL:ALL) NOPASSWD:ALL/d' /etc/sudoers
 ## END
+
+## Step 6: Restore real sudo binary
+## The deb_namserver module replaces /usr/bin/sudo with a FIFO-based
+## wrapper to work around the nosuid chroot limitation. Restore the
+## real binary now that all modules have finished.
+if [ -f /usr/bin/sudo.real ]; then
+    echo_green "Restoring real sudo binary ..."
+    cp /usr/bin/sudo.real /usr/bin/sudo
+    chmod 4755 /usr/bin/sudo
+    chown root:root /usr/bin/sudo
+    rm -f /usr/bin/sudo.real
+fi
+## END

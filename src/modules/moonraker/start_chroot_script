@@ -89,15 +89,12 @@ echo_green "Creating moonraker systemd files ..."
 MOONRAKER_DATA_PATH="/home/${BASE_USER}/printer_data"
 MOONRAKER_ENV_FILE="${MOONRAKER_DATA_PATH}/systemd/moonraker.env"
 MOONRAKER_PYTHON="/home/${BASE_USER}/moonraker-env/bin/python"
-MOONRAKER_ARGS="/home/${BASE_USER}/moonraker/moonraker/main.py"
 MOONRAKER_SRC="/home/${BASE_USER}/moonraker"
 
 # Create env file (install script's stdin-based sudo doesn't work in chroot)
 mkdir -p "${MOONRAKER_DATA_PATH}/systemd"
 cat > "${MOONRAKER_ENV_FILE}" << ENVEOF
 MOONRAKER_DATA_PATH=${MOONRAKER_DATA_PATH}
-MOONRAKER_ARGS=-m moonraker
-PYTHONPATH=${MOONRAKER_SRC}
 ENVEOF
 chown -R "${BASE_USER}:${BASE_USER}" "${MOONRAKER_DATA_PATH}/systemd"
 
@@ -117,7 +114,8 @@ User=${BASE_USER}
 SupplementaryGroups=moonraker-admin
 RemainAfterExit=yes
 EnvironmentFile=${MOONRAKER_ENV_FILE}
-ExecStart=${MOONRAKER_PYTHON} ${MOONRAKER_ARGS}
+Environment=PYTHONPATH=${MOONRAKER_SRC}
+ExecStart=${MOONRAKER_PYTHON} -m moonraker
 Restart=always
 RestartSec=10
 SVCEOF
