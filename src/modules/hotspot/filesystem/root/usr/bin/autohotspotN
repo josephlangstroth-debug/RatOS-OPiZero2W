@@ -71,12 +71,23 @@ chksys()
 
 chksys
 
-# Check if wpa_supplicant.conf has any configured networks
-wpassid=$(awk '/ssid="/{ print $0 }' /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null | head -1)
+# Check for configured WiFi: NM profiles or wpa_supplicant.conf
+# (Skip iw scan - UWE5622 firmware crashes on scan commands)
+has_wifi=false
+if command -v nmcli >/dev/null 2>&1; then
+    wifi_profiles=$(nmcli -t -f TYPE,NAME connection show 2>/dev/null | grep "^802-11-wireless:" | head -1)
+    if [ -n "$wifi_profiles" ]; then
+        has_wifi=true
+    fi
+fi
+if [ "$has_wifi" = false ]; then
+    wpassid=$(awk '/ssid="/{ print $0 }' /etc/wpa_supplicant/wpa_supplicant.conf 2>/dev/null | head -1)
+    if [ -n "$wpassid" ]; then
+        has_wifi=true
+    fi
+fi
 
-if [ -z "$wpassid" ]; then
-    # No WiFi networks configured - go straight to hotspot mode
-    # (Skip iw scan - UWE5622 firmware crashes on scan commands)
+if [ "$has_wifi" = false ]; then
     echo "No configured WiFi networks, creating hotspot"
     createAdHocNetwork
 else
